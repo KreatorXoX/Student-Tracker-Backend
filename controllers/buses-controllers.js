@@ -1,22 +1,12 @@
 const { validationResult } = require("express-validator");
-
+const asyncHandler = require("express-async-handler");
 const HttpError = require("../models/http-error");
 const BusModel = require("../models/bus-model");
 const StudentModel = require("../models/student-model");
 
-const getAllBuses = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
-  let allBuses;
+const getAllBuses = asyncHandler(async (req, res, next) => {
+  const allBuses = await BusModel.find();
 
-  try {
-    allBuses = await BusModel.find({});
-  } catch (error) {
-    return next(new HttpError("Couldnt get the bus data from the DB", 500));
-  }
   if (!allBuses || allBuses.length === 0) {
     return next(new HttpError("No bus found", 404));
   }
@@ -24,32 +14,21 @@ const getAllBuses = async (req, res, next) => {
   res
     .status(200)
     .json({ buses: allBuses.map((bus) => bus.toObject({ getters: true })) });
-};
+});
 
-const getBusById = async (req, res, next) => {
+const getBusById = asyncHandler(async (req, res, next) => {
   const { busId } = req.params;
 
-  let bus;
-
-  try {
-    bus = await BusModel.findById(busId);
-  } catch (error) {
-    return next(new HttpError("Couldnt connect db to fetch bus data", 500));
-  }
+  const bus = await BusModel.findById(busId).exec();
 
   if (!bus) {
     return next(new HttpError("no buses found with the given id", 404));
   }
 
   res.json({ bus: bus.toObject({ getters: true }) });
-};
+});
 
-const createBus = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
+const createBus = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
 
   if (!errors.isEmpty()) {
@@ -66,164 +45,104 @@ const createBus = async (req, res, next) => {
     students: [],
   });
 
-  try {
-    await newBus.save();
-  } catch (error) {
-    console.log(error);
-    return next(
-      new HttpError("Failed to create new-bus, please try again later", 500)
-    );
-  }
+  await newBus.save();
 
   res.status(201).json({ bus: newBus.toObject({ getters: true }) });
-};
+});
 
-const updateBus = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
+const updateBus = asyncHandler(async (req, res, next) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return next(new HttpError("Invalid inputs are being passed", 422));
   }
+
   const { schoolName, busDriver, studentHandler } = req.body;
   const busId = req.params.busId;
 
-  let updatedBus;
   let busCapacity = 0;
-  try {
-    updatedBus = await BusModel.findById(busId);
-  } catch (error) {
-    return next(new HttpError("Couldnt get the bus data from the DB", 500));
-  }
+
+  const updatedBus = await BusModel.findById(busId).exec();
 
   if (!updatedBus) {
     return next(new HttpError("No bus found with the given id", 404));
   }
 
+  // if bus is assigned to new school, reset the capacity and remove busId from the previous students
   if (updatedBus.schoolName !== schoolName) {
     updatedBus.schoolName = schoolName;
     updatedBus.students = [];
-    try {
-      busCapacity = await StudentModel.updateMany(
-        { busId: updatedBus._id },
-        { busId: null }
-      );
 
-      updatedBus.capacity += busCapacity;
-    } catch (error) {
-      return next(new HttpError("Couldnt change the students busIds", 500));
-    }
+    busCapacity = await StudentModel.updateMany(
+      { busId: updatedBus._id },
+      { busId: null }
+    ).exec();
+    updatedBus.capacity += busCapacity.modifiedCount;
   }
 
   updatedBus.busDriver = busDriver;
   updatedBus.studentHandler = studentHandler;
+  await updatedBus.save();
 
-  try {
-    await updatedBus.save();
-  } catch (error) {
-    console.log(error);
-    return next(new HttpError("Couldnt access to db to updated bus"));
-  }
   res.status(200).json({ bus: updatedBus.toObject({ getters: true }) });
-};
+});
 
-const deleteBus = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
+const deleteBus = asyncHandler(async (req, res, next) => {
   const { busId } = req.params;
 
-  let deletedBus;
-
-  try {
-    deletedBus = await BusModel.findById(busId);
-  } catch (error) {
-    console.log(error);
-    return next(new HttpError("Couldnt access to db to delete bus"));
-  }
+  const deletedBus = await BusModel.findById(busId).exec();
 
   if (!deletedBus) {
     return next(new HttpError("No bus found with the given bus-id", 404));
   }
 
-  //remove busId from students.
-  try {
-    await StudentModel.updateMany({ busId: deletedBus._id }, { busId: null });
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to db to update students by bus", 500)
-    );
-  }
+  // remove busId from students.
+  await StudentModel.updateMany(
+    { busId: deletedBus._id },
+    { busId: null }
+  ).exec();
 
-  try {
-    await deletedBus.remove();
-  } catch (error) {
-    return next(new HttpError("Couldnt access to db to delete bus", 500));
-  }
+  // remove bus
+  await deletedBus.remove();
+
   res.status(200).json({ message: "Bus Deleted Successfuly" });
-};
+});
 
-const populateBus = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
+const populateBus = asyncHandler(async (req, res, next) => {
   const { busId } = req.params;
 
-  let busToPopulate;
-  let busCapacity;
-  try {
-    busToPopulate = await BusModel.findById(busId);
-  } catch (error) {
-    console.log(error);
-    return next(new HttpError("Couldnt access to db to delete bus"));
-  }
+  const busToPopulate = await BusModel.findById(busId).exec();
 
   if (!busToPopulate) {
     return next(new HttpError("No bus found with the given bus-id", 404));
   }
 
-  try {
-    const returnData = await StudentModel.updateMany(
-      { busId: null, schoolName: busToPopulate.schoolName },
-      { busId: busToPopulate._id },
-      { new: true }
-    );
-    busCapacity = returnData.modifiedCount;
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to db to update students by bus", 500)
-    );
-  }
+  // assigning the student who are not assigned a bus and their schoolname is the same with the bus's schoolname
+  const returnData = await StudentModel.updateMany(
+    { busId: null, schoolName: busToPopulate.schoolName },
+    { busId: busToPopulate._id },
+    { new: true }
+  ).exec();
 
-  let students;
-  try {
-    students = await StudentModel.find({ busId: busToPopulate._id });
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to db to update students by bus", 500)
-    );
-  }
+  // find how many students are assigned to the bus so we can substract it from the capacity
+  const populateCount = returnData.modifiedCount;
+
+  const students = await StudentModel.find({ busId: busToPopulate._id }).exec();
 
   if (!students) {
     return next(new HttpError("No students found to insert to bus", 404));
   }
 
-  try {
-    for (let std of students) {
-      busToPopulate.students.push(std);
-    }
-    busToPopulate.capacity -= busCapacity;
-    await busToPopulate.save();
-  } catch (error) {}
+  for (let std of students) {
+    busToPopulate.students.push(std);
+  }
+  busToPopulate.capacity -= populateCount;
+  await busToPopulate.save();
 
   res.status(200).json({
     message: "Populated",
     students: students.map((std) => std.toObject({ getters: true })),
   });
-};
+});
 
 exports.getAllBuses = getAllBuses;
 exports.getBusById = getBusById;

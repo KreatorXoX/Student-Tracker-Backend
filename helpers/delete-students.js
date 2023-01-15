@@ -10,7 +10,7 @@ const removeStudent = async (stdId) => {
   let student;
 
   try {
-    student = await StudentModel.findById(stdId);
+    student = await StudentModel.findById(stdId).exec();
   } catch (error) {
     new HttpError("Couldnt access to DB to get the student data", 500);
   }
@@ -22,7 +22,7 @@ const removeStudent = async (stdId) => {
   let bus;
 
   try {
-    bus = await BusModel.findById(student.busId);
+    bus = await BusModel.findById(student.busId).exec();
   } catch (error) {
     new HttpError("Couldnt access to DB to get the bus data", 500);
   }
@@ -34,7 +34,7 @@ const removeStudent = async (stdId) => {
   let parent;
 
   try {
-    parent = await UserModel.findOne({ children: stdId });
+    parent = await UserModel.findOne({ children: stdId }).exec();
   } catch (error) {
     new HttpError("Couldnt access to DB to get the parent data", 500);
   }
@@ -63,7 +63,7 @@ const removeStudent = async (stdId) => {
       )
     );
   }
-  cloudinary.uploader.destroy(imageKey);
+  await cloudinary.uploader.destroy(imageKey);
 };
 
 module.exports = removeStudent;

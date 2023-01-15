@@ -1,14 +1,22 @@
 const express = require("express");
 const { check } = require("express-validator");
 
-const upload = require('../config/multerOptions')
+const upload = require("../config/multerOptions");
 const authCheck = require("../middleware/auth-check");
+const adminCheck = require("../middleware/admin-check");
 
 const userControllers = require("../controllers/user-controllers");
 
 const router = express.Router();
 
-router.post("/login", userControllers.loginUser);
+router.post(
+  "/login",
+  [
+    check("email").normalizeEmail().isEmail(),
+    check("password").isLength({ min: 5 }),
+  ],
+  userControllers.loginUser
+);
 
 router.post(
   "/register",
@@ -24,9 +32,18 @@ router.post(
 router.use(authCheck);
 
 router.get("/user/:userId", userControllers.getUserById);
-router.get("/:role", userControllers.getUsers);
+router.get("/:role", userControllers.getUsersByRole);
 
-router.patch("/:userId", userControllers.updateUser);
-router.delete("/:userId", userControllers.deleteUser);
+router.patch(
+  "/:userId",
+  [
+    check("name").notEmpty(),
+    check("email").normalizeEmail().isEmail(),
+    check("password").isLength({ min: 5 }),
+    check("phoneNumber").not().isEmpty(),
+  ],
+  userControllers.updateUser
+);
+router.delete("/:userId", adminCheck, userControllers.deleteUser);
 
 module.exports = router;

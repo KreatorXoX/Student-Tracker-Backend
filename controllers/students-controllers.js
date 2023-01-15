@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
+const asyncHandler = require("express-async-handler");
 
 const HttpError = require("../models/http-error");
 const StudentModel = require("../models/student-model");
@@ -8,115 +9,49 @@ const UserModel = require("../models/user-model");
 
 const removeStudent = require("../helpers/delete-students");
 
-const getAllStudents = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
-  let allStudents;
-
-  try {
-    allStudents = await StudentModel.find({});
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to the DB to get students data", 500)
-    );
-  }
+const getAllStudents = asyncHandler(async (req, res, next) => {
+  const allStudents = await StudentModel.find();
 
   if (!allStudents || allStudents.length === 0) {
     return next(new HttpError("No students found", 404));
   }
 
-  // for (const student of allStudents) {
-  //   if (student.imageExp && student.imageExp.getTime() > new Date()) {
-  //     continue;
-  //   }
-
-  //   const { client, command } = AwsCommand("get", student.imageKey);
-  //   const url = await getSignedUrl(client, command, { expiresIn: 3600 });
-
-  //   student.image = url;
-  //   student.imageExp = new Date(new Date().getTime() + 1000 * 60 * 60);
-  //   await student.save();
-  // }
-
   res.status(200).json({
     students: allStudents.map((student) => student.toObject({ getters: true })),
   });
-};
+});
 
-const getStudentById = async (req, res, next) => {
+const getStudentById = asyncHandler(async (req, res, next) => {
   const { stdId } = req.params;
 
-  let student;
-
-  try {
-    student = await StudentModel.findById(stdId);
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt connect to db to get student data", 500)
-    );
-  }
+  const student = await StudentModel.findById(stdId).exec();
 
   if (!student) {
     return next(new HttpError("No students found with the given id", 404));
   }
 
-  if (req.userData.role !== "admin") {
-    do {
-      if (req.userData.userId === student.parentId.toString()) break;
+  if (req.userData.userId !== student.parentId.toString())
+    if (req.userData.role !== "admin")
       return next(
         new HttpError("You are not authorized to do this operation!!!", 401)
       );
-    } while (false);
-  }
-
-  // do {
-  //   if (student.imageExp && student.imageExp.getTime() > new Date()) {
-  //     break;
-  //   }
-  //   const { client, command } = AwsCommand("get", student.imageKey);
-  //   const url = await getSignedUrl(client, command, { expiresIn: 3600 });
-  //   student.image = url;
-  //   student.imageExp = new Date(new Date().getTime() + 1000 * 60 * 60);
-  //   await student.save();
-  // } while (false);
 
   res.json({ student: student.toObject({ getters: true }) });
-};
+});
 
-const getStudentsByBus = async (req, res, next) => {
+const getStudentsByBus = asyncHandler(async (req, res, next) => {
   if (req.userData.role === "parent") {
     return next(new HttpError("Forbiden route !!!", 403));
   }
   const { busId } = req.params;
 
-  let students;
-
-  try {
-    students = await StudentModel.find({ busId: busId }).populate("busId");
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to DB to get the students with busId", 500)
-    );
-  }
+  const students = await StudentModel.find({ busId: busId })
+    .populate("busId")
+    .exec();
 
   if (students.length === 0) {
     return next(new HttpError("No student found on the given bus ID", 404));
   }
-
-  // for (const student of students) {
-  //   if (student.imageExp && student.imageExp.getTime() > new Date()) {
-  //     continue;
-  //   }
-  //   const { client, command } = AwsCommand("get", student.imageKey);
-
-  //   const url = await getSignedUrl(client, command, { expiresIn: 3600 });
-  //   student.image = url;
-  //   student.imageExp = new Date(new Date().getTime() + 1000 * 60 * 60);
-  //   await student.save();
-  // }
 
   res.status(200).json({
     students: students.map((student) => student.toObject({ getters: true })),
@@ -125,32 +60,18 @@ const getStudentsByBus = async (req, res, next) => {
     studentHandler: students[0].busId.studentHandler.name,
     busId: busId,
   });
-};
+});
 
-const getStudentsByParent = async (req, res, next) => {
+const getStudentsByParent = asyncHandler(async (req, res, next) => {
   const { parentId } = req.params;
 
-  if (req.userData.role !== "admin") {
-    do {
-      if (req.userData.userId === parentId) break;
+  if (req.userData.userId !== parentId)
+    if (req.userData.role !== "admin")
       return next(
         new HttpError("You are not authorized to do this operation!!!", 401)
       );
-    } while (false);
-  }
 
-  let parent;
-
-  try {
-    parent = await UserModel.findById(parentId).populate("children");
-  } catch (error) {
-    return next(
-      new HttpError(
-        "Couldnt access to DB to get the students from parents",
-        500
-      )
-    );
-  }
+  const parent = await UserModel.findById(parentId).populate("children").exec();
 
   if (!parent) {
     return next(
@@ -158,32 +79,13 @@ const getStudentsByParent = async (req, res, next) => {
     );
   }
 
-  // for (const child of parent.children) {
-  //   if (child.imageExp && child.imageExp.getTime() > new Date()) {
-  //     continue;
-  //   }
-  //   const { client, command } = AwsCommand("get", child.imageKey);
-
-  //   const url = await getSignedUrl(client, command, { expiresIn: 3600 });
-  //   child.image = url;
-  //   child.imageExp = new Date(new Date().getTime() + 1000 * 60 * 60);
-  //   await child.save();
-  // }
-
   res.status(200).json({
     students: parent.children.map((child) => child.toObject({ getters: true })),
   });
-};
+});
 
-const createStudent = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
-
+const createStudent = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
-
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs are being passed", 422));
   }
@@ -201,13 +103,8 @@ const createStudent = async (req, res, next) => {
   } = req.body;
 
   const contacts = JSON.parse(emergencyContacts);
-  let parent;
 
-  try {
-    parent = await UserModel.findById(parentId);
-  } catch (error) {
-    return next(new HttpError("Couldnt access to DB to get the parent", 500));
-  }
+  const parent = await UserModel.findById(parentId).exec();
 
   if (!parent) {
     return next(
@@ -215,13 +112,7 @@ const createStudent = async (req, res, next) => {
     );
   }
 
-  let bus;
-
-  try {
-    bus = await BusModel.findOne({ schoolName: schoolName });
-  } catch (error) {
-    return next(new HttpError("Couldnt access to DB to get the bus", 500));
-  }
+  const bus = await BusModel.findOne({ schoolName: schoolName }).exec();
 
   if (!bus) {
     return next(new HttpError("Couldnt find a bus with the given bus id", 404));
@@ -245,27 +136,20 @@ const createStudent = async (req, res, next) => {
     parentId,
   });
 
-  try {
-    const sess = await mongoose.startSession();
-    sess.startTransaction();
-    await newStudent.save({ session: sess });
-    parent.children.push(newStudent);
-    bus.students.push(newStudent);
-    bus.capacity -= 1;
-    await parent.save({ session: sess });
-    await bus.save({ session: sess });
-    await sess.commitTransaction();
-  } catch (error) {
-    console.log(error);
-    return next(
-      new HttpError("Something went wrong trying to create student", 500)
-    );
-  }
+  const sess = await mongoose.startSession();
+  sess.startTransaction();
+  await newStudent.save({ session: sess });
+  parent.children.push(newStudent);
+  bus.students.push(newStudent);
+  bus.capacity -= 1;
+  await parent.save({ session: sess });
+  await bus.save({ session: sess });
+  await sess.commitTransaction();
 
   res.status(201).json({ student: newStudent.toObject({ getters: true }) });
-};
+});
 
-const updateStudent = async (req, res, next) => {
+const updateStudent = asyncHandler(async (req, res, next) => {
   const {
     name,
     schoolName,
@@ -277,80 +161,48 @@ const updateStudent = async (req, res, next) => {
   } = req.body;
 
   const { stdId } = req.params;
-
-  let updatedStudent;
-
-  try {
-    updatedStudent = await StudentModel.findById(stdId).populate("parentId");
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt access to DB to get the student data", 500)
-    );
-  }
+  const updatedStudent = await StudentModel.findById(stdId)
+    .populate("parentId")
+    .exec();
 
   if (!updatedStudent) {
     return next(new HttpError("Couldnt find a student with the given id", 404));
   }
 
-  if (updatedStudent.parentId.id !== req.userData.userId) {
-    do {
-      if (req.userData.role === "admin") {
-        break;
-      }
-
+  if (req.userData.userId !== updatedStudent.parentId._id)
+    if (req.userData.role !== "admin")
       return next(
         new HttpError("You are not authorized to do this operation!!!", 401)
       );
-    } while (false);
-  }
 
-  let newBus;
-  let oldBus;
-
+  // if students school is updated we need to update the bus as well as adding the student to the new bus !
   if (schoolName !== updatedStudent.schoolName) {
-    try {
-      oldBus = await BusModel.findById(updatedStudent.busId);
-    } catch (error) {
-      return next(
-        new HttpError("Couldnt access to DB to get the bus data", 500)
-      );
-    }
+    const oldBus = await BusModel.findById(updatedStudent.busId).exec();
 
     if (!oldBus) {
       return next(new HttpError("Couldnt find a bus with the given id", 404));
     }
 
-    try {
-      newBus = await BusModel.findOne({ schoolName: schoolName });
-    } catch (error) {
-      return next(
-        new HttpError("Couldnt access to DB to get the bus data", 500)
-      );
-    }
+    const newBus = await BusModel.findOne({ schoolName: schoolName }).exec();
 
     if (!newBus) {
-      return next(new HttpError("Couldnt find a bus with the given id", 404));
-    }
-    updatedStudent.schoolName = schoolName
-      ? schoolName
-      : updatedStudent.schoolName;
-    updatedStudent.busId = newBus._id ? newBus._id : updatedStudent.busId;
-
-    try {
-      const sess = await mongoose.startSession();
-      sess.startTransaction();
-      oldBus.students.pull(updatedStudent);
-      oldBus.capacity += 1;
-      newBus.students.push(updatedStudent);
-      newBus.capacity -= 1;
-      await oldBus.save({ session: sess });
-      await newBus.save({ session: sess });
-      await sess.commitTransaction();
-    } catch (error) {
       return next(
-        new HttpError("Couldnt update bus info for the student", 500)
+        new HttpError("Couldnt find a bus with the given schoolname", 404)
       );
     }
+
+    updatedStudent.schoolName = schoolName;
+    updatedStudent.busId = newBus._id ? newBus._id : updatedStudent.busId;
+
+    const sess = await mongoose.startSession();
+    sess.startTransaction();
+    oldBus.students.pull(updatedStudent);
+    oldBus.capacity += 1;
+    newBus.students.push(updatedStudent);
+    newBus.capacity -= 1;
+    await oldBus.save({ session: sess });
+    await newBus.save({ session: sess });
+    await sess.commitTransaction();
   }
 
   updatedStudent.name = name;
@@ -358,36 +210,22 @@ const updateStudent = async (req, res, next) => {
   updatedStudent.bloodType = bloodType;
   updatedStudent.alergies = alergies;
   updatedStudent.knownDiseases = knownDiseases;
-  updatedStudent.isComing =
-    isComing !== updatedStudent.isComing ? isComing : updatedStudent.isComing;
+  updatedStudent.isComing = isComing;
 
-  try {
-    await updatedStudent.save();
-  } catch (error) {
-    return next(new HttpError("Couldnt update student", 500));
-  }
+  await updatedStudent.save();
 
   res.status(200).json({ student: updatedStudent.toObject({ getters: true }) });
-};
+});
 
-const deleteStudent = async (req, res, next) => {
-  if (req.userData.role !== "admin") {
-    return next(
-      new HttpError("You are not authorized to do this operation!!!", 401)
-    );
-  }
-
+const deleteStudent = asyncHandler(async (req, res, next) => {
   const { stdId } = req.params;
-  try {
-    await removeStudent(stdId);
-  } catch (error) {
-    return next(new HttpError("Couldnt connect to db to delete", 500));
-  }
+
+  await removeStudent(stdId);
 
   res.status(200).json({ message: "Deletion Successful" });
-};
+});
 
-const onTheBusToggler = async (req, res, next) => {
+const onTheBusToggler = asyncHandler(async (req, res, next) => {
   if (req.userData.role !== "employee") {
     return next(
       new HttpError("You are not authorized to do this operation!!!", 401)
@@ -397,41 +235,25 @@ const onTheBusToggler = async (req, res, next) => {
   const studentId = req.params.stdId;
   const studentState = req.body.state;
 
-  let student;
-  try {
-    student = await StudentModel.findById(studentId);
-  } catch (error) {
-    return next(
-      new HttpError("Couldnt connect to db to update the props", 500)
-    );
-  }
+  const student = await StudentModel.findById(studentId).exec();
 
   student.isOnTheBus = studentState;
   student.wasOnTheBus = true;
-  try {
-    await student.save();
-  } catch (error) {
-    return next(new HttpError("Couldnt update student", 500));
-  }
+  await student.save();
 
   res.status(200).json({ message: "Presence Status updated successfuly" });
-};
+});
 
-const updateLocation = async (req, res, next) => {
+const updateLocation = asyncHandler(async (req, res, next) => {
   if (req.userData.role !== "employee") {
     return next(
       new HttpError("You are not authorized to do this operation!!!", 401)
     );
   }
+
   const { lat, lng } = req.body;
   const { stdId } = req.params;
-
-  let student;
-  try {
-    student = await StudentModel.findById(stdId);
-  } catch (error) {
-    return next(new HttpError("Couldnt connect to db", 500));
-  }
+  const student = await StudentModel.findById(stdId).exec();
 
   if (!student) {
     return next(new HttpError("No students found with the given id", 404));
@@ -439,15 +261,10 @@ const updateLocation = async (req, res, next) => {
 
   student.location.lat = lat;
   student.location.lng = lng;
-
-  try {
-    await student.save();
-  } catch (error) {
-    return next(new HttpError("Couldnt update student location", 500));
-  }
+  await student.save();
 
   res.status(200).json({ message: "Location updated successfuly" });
-};
+});
 
 exports.getAllStudents = getAllStudents;
 exports.getStudentById = getStudentById;
@@ -457,5 +274,4 @@ exports.createStudent = createStudent;
 exports.updateStudent = updateStudent;
 exports.deleteStudent = deleteStudent;
 exports.onTheBusToggler = onTheBusToggler;
-//exports.getLocation = getLocation;
 exports.updateLocation = updateLocation;
