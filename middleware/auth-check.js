@@ -2,24 +2,20 @@ const jwt = require("jsonwebtoken");
 const HttpError = require("../models/http-error");
 
 module.exports = (req, res, next) => {
-  if (req.method === "OPTIONS") {
-    return next();
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
 
-  try {
-    const token = req.headers.authorization.split(" ")[1]; // Authorization: 'Bearer TOKEN'
-    if (!token) {
-      throw new Error("token error");
-    }
+  const token = authHeader.split(" ")[1];
 
-    const decodedToken = jwt.verify(token, process.env.JWT_KEY);
-
-    req.userData = { userId: decodedToken.userId, role: decodedToken.role };
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if (err)
+      return next(
+        new HttpError("Authentication failed due to invalid token", 403)
+      );
+    req.userData = { userId: decoded.userId, role: decoded.role };
     next();
-  } catch (error) {
-    console.log(error);
-    return next(
-      new HttpError("Authentication failed due to invalid token", 403)
-    );
-  }
+  });
 };

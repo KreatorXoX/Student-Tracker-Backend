@@ -23,8 +23,9 @@ app.use(bodyParser.json());
 app.use(cookieParser());
 
 // setting different routes for api endpoints
-app.use("/api/students", require("./routes/students-routes"));
+app.use("/api/auth", require("./routes/auth-routes"));
 app.use("/api/users", require("./routes/user-routes"));
+app.use("/api/students", require("./routes/students-routes"));
 app.use("/api/buses", require("./routes/buses-routes"));
 app.use("/api/sessions", require("./routes/session-routes"));
 
