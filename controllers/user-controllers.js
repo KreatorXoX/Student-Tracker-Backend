@@ -11,97 +11,97 @@ const UserModel = require("../models/user-model");
 const removeStudent = require("../helpers/delete-students");
 const asyncHandler = require("express-async-handler");
 
-const loginUser = asyncHandler(async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return next(new HttpError("Invalid inputs are being passed", 422));
-  }
+// const loginUser = asyncHandler(async (req, res, next) => {
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return next(new HttpError("Invalid inputs are being passed", 422));
+//   }
 
-  const { email, password } = req.body;
+//   const { email, password } = req.body;
 
-  const foundUser = await UserModel.findOne({ email: email }).exec();
+//   const foundUser = await UserModel.findOne({ email: email }).exec();
 
-  if (!foundUser) {
-    return next(new HttpError("Credentials are not matchig", 422));
-  }
+//   if (!foundUser) {
+//     return next(new HttpError("Credentials are not matchig", 422));
+//   }
 
-  const validUser = await bcrypt.compare(password, foundUser.password);
+//   const validUser = await bcrypt.compare(password, foundUser.password);
 
-  if (!validUser) {
-    return next(new HttpError("Credentials are not matchig", 422));
-  }
+//   if (!validUser) {
+//     return next(new HttpError("Credentials are not matchig", 422));
+//   }
 
-  const token = jwt.sign(
-    { userId: foundUser.id, role: foundUser.role },
-    process.env.JWT_KEY,
-    { expiresIn: "1h" }
-  );
+//   const token = jwt.sign(
+//     { userId: foundUser.id, role: foundUser.role },
+//     process.env.JWT_KEY,
+//     { expiresIn: "1h" }
+//   );
 
-  res.status(200).json({
-    message: "Logged In",
-    userInfo: {
-      role: foundUser.role,
-      id: foundUser.id,
-      busId: foundUser.busId ? foundUser.busId : undefined,
-    },
-    token: token,
-  });
-});
+//   res.status(200).json({
+//     message: "Logged In",
+//     userInfo: {
+//       role: foundUser.role,
+//       id: foundUser.id,
+//       busId: foundUser.busId ? foundUser.busId : undefined,
+//     },
+//     token: token,
+//   });
+// });
 
-const registerUser = asyncHandler(async (req, res, next) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return next(new HttpError("Invalid inputs are being passed", 422));
-  }
+// const registerUser = asyncHandler(async (req, res, next) => {
+//   const errors = validationResult(req);
+//   if (!errors.isEmpty()) {
+//     return next(new HttpError("Invalid inputs are being passed", 422));
+//   }
 
-  const { name, email, phoneNumber, password, role, busId } = req.body;
+//   const { name, email, phoneNumber, password, role, busId } = req.body;
 
-  const user = await UserModel.findOne({ email: email }).exec();
+//   const user = await UserModel.findOne({ email: email }).exec();
 
-  if (user) {
-    return next(new HttpError("already exists", 422));
-  }
+//   if (user) {
+//     return next(new HttpError("already exists", 422));
+//   }
 
-  const hashedPassword = await bcrypt.hash(password, 12);
+//   const hashedPassword = await bcrypt.hash(password, 12);
 
-  let userImage = undefined;
-  if (req.file) {
-    userImage = { url: req.file.path, filename: req.file.filename };
-  }
+//   let userImage = undefined;
+//   if (req.file) {
+//     userImage = { url: req.file.path, filename: req.file.filename };
+//   }
 
-  let newUser;
+//   let newUser;
 
-  if (role === "employee") {
-    newUser = new UserModel({
-      name,
-      image: userImage,
-      password: hashedPassword,
-      email,
-      phoneNumber,
-      role,
-      busId,
-    });
-  } else {
-    newUser = new UserModel({
-      name,
-      image: userImage,
-      password: hashedPassword,
-      email,
-      phoneNumber,
-      role,
-    });
-  }
+//   if (role === "employee") {
+//     newUser = new UserModel({
+//       name,
+//       image: userImage,
+//       password: hashedPassword,
+//       email,
+//       phoneNumber,
+//       role,
+//       busId,
+//     });
+//   } else {
+//     newUser = new UserModel({
+//       name,
+//       image: userImage,
+//       password: hashedPassword,
+//       email,
+//       phoneNumber,
+//       role,
+//     });
+//   }
 
-  await newUser.save();
+//   await newUser.save();
 
-  res.status(200).json({
-    message: "Registered new user",
-    userRole: {
-      role: newUser.role,
-      id: busId ? busId : newUser._id,
-    },
-  });
-});
+//   res.status(200).json({
+//     message: "Registered new user",
+//     userRole: {
+//       role: newUser.role,
+//       id: busId ? busId : newUser._id,
+//     },
+//   });
+// });
 
 const getUserById = asyncHandler(async (req, res, next) => {
   const { userId } = req.params;
@@ -182,8 +182,8 @@ const deleteUser = asyncHandler(async (req, res, next) => {
   res.status(200).json({ message: "Deleted user" });
 });
 
-exports.loginUser = loginUser;
-exports.registerUser = registerUser;
+// exports.loginUser = loginUser;
+// exports.registerUser = registerUser;
 exports.getUsersByRole = getUsersByRole;
 exports.getUserById = getUserById;
 exports.updateUser = updateUser;

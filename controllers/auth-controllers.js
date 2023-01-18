@@ -52,31 +52,10 @@ const register = asyncHandler(async (req, res) => {
 
   await newUser.save();
 
-  const accessToken = jwt.sign(
-    {
-      userId: foundUser.id,
-      role: foundUser.role,
-    },
-    process.env.ACCESS_TOKEN_SECRET,
-    { expiresIn: "30m" }
-  );
-  const refreshToken = jwt.sign(
-    { id: newUser.id },
-    process.env.REFRESH_TOKEN_SECRET,
-    { expiresIn: "7d" }
-  );
-
-  res.cookie("jwtToken", refreshToken, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "None",
-    maxAge: 7 * 24 * 60 * 60 * 1000,
-  });
-
-  res.json({ accessToken });
+  res.json({ message: `Registered new ${newUser.role}` });
 });
 
-const login = asyncHandler(async (req, res) => {
+const login = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs are being passed", 422));
@@ -99,6 +78,7 @@ const login = asyncHandler(async (req, res) => {
     {
       userId: foundUser.id,
       role: foundUser.role,
+      busId: foundUser.busId ? foundUser.busId : undefined,
     },
     process.env.ACCESS_TOKEN_SECRET,
     { expiresIn: "30m" }
@@ -141,6 +121,7 @@ const refresh = asyncHandler(async (req, res) => {
         {
           userId: foundUser.id,
           role: foundUser.role,
+          busId: foundUser.busId ? foundUser.busId : undefined,
         },
         process.env.ACCESS_TOKEN_SECRET,
         { expiresIn: "30m" }
