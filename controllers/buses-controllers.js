@@ -139,7 +139,7 @@ const populateBus = asyncHandler(async (req, res, next) => {
   await busToPopulate.save();
 
   res.status(200).json({
-    message: "Populated",
+    id: busId,
     students: students.map((std) => std.toObject({ getters: true })),
   });
 });

@@ -241,7 +241,9 @@ const onTheBusToggler = asyncHandler(async (req, res, next) => {
   student.wasOnTheBus = true;
   await student.save();
 
-  res.status(200).json({ message: "Presence Status updated successfuly" });
+  res
+    .status(200)
+    .json({ id: studentId, message: "Presence Status updated successfuly" });
 });
 
 const updateLocation = asyncHandler(async (req, res, next) => {
@@ -263,7 +265,7 @@ const updateLocation = asyncHandler(async (req, res, next) => {
   student.location.lng = lng;
   await student.save();
 
-  res.status(200).json({ message: "Location updated successfuly" });
+  res.status(200).json({ id: stdId, message: "Location updated successfuly" });
 });
 
 exports.getAllStudents = getAllStudents;

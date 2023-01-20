@@ -96,7 +96,7 @@ const login = asyncHandler(async (req, res, next) => {
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 
-  res.json({ accessToken });
+  res.json({ accessToken, role: foundUser.role, id: foundUser.id });
 });
 
 const refresh = asyncHandler(async (req, res) => {
@@ -141,7 +141,7 @@ const logout = asyncHandler(async (req, res) => {
     sameSite: "None",
     secure: true,
   });
-  res.json({ message: "Cookie cleared" });
+  res.json({ message: "Logged out and Cleared Cookies" });
 });
 
 module.exports = {
