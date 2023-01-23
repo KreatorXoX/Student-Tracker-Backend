@@ -9,15 +9,28 @@ const UserModel = require("../models/user-model");
 
 const removeStudent = require("../helpers/delete-students");
 
-const getAllStudents = asyncHandler(async (req, res, next) => {
-  const allStudents = await StudentModel.find();
+const getStudents = asyncHandler(async (req, res, next) => {
+  const { by, id } = req.query;
 
-  if (!allStudents || allStudents.length === 0) {
+  let students;
+
+  if (by === "bus") {
+    console.log("bus");
+    students = await StudentModel.find({ busId: id }).exec();
+  } else if (by === "parent") {
+    console.log("parent");
+    students = await StudentModel.find({ parentId: id }).exec();
+  } else {
+    console.log("undefined");
+    students = await StudentModel.find();
+  }
+
+  if (!students || students.length === 0) {
     return next(new HttpError("No students found", 404));
   }
 
   res.status(200).json({
-    students: allStudents.map((student) => student.toObject({ getters: true })),
+    students: students.map((student) => student.toObject({ getters: true })),
   });
 });
 
@@ -59,28 +72,6 @@ const getStudentsByBus = asyncHandler(async (req, res, next) => {
     busDriver: students[0].busId.busDriver.name,
     studentHandler: students[0].busId.studentHandler.name,
     busId: busId,
-  });
-});
-
-const getStudentsByParent = asyncHandler(async (req, res, next) => {
-  const { parentId } = req.params;
-
-  if (req.userData.userId !== parentId)
-    if (req.userData.role !== "admin")
-      return next(
-        new HttpError("You are not authorized to do this operation!!!", 401)
-      );
-
-  const parent = await UserModel.findById(parentId).populate("children").exec();
-
-  if (!parent) {
-    return next(
-      new HttpError("No parent found in relation with the students", 404)
-    );
-  }
-
-  res.status(200).json({
-    students: parent.children.map((child) => child.toObject({ getters: true })),
   });
 });
 
@@ -268,10 +259,9 @@ const updateLocation = asyncHandler(async (req, res, next) => {
   res.status(200).json({ id: stdId, message: "Location updated successfuly" });
 });
 
-exports.getAllStudents = getAllStudents;
+exports.getStudents = getStudents;
 exports.getStudentById = getStudentById;
 exports.getStudentsByBus = getStudentsByBus;
-exports.getStudentsByParent = getStudentsByParent;
 exports.createStudent = createStudent;
 exports.updateStudent = updateStudent;
 exports.deleteStudent = deleteStudent;

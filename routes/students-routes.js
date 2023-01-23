@@ -11,10 +11,9 @@ const router = express.Router();
 
 router.use(authCheck);
 
-router.get("/", adminCheck, studentsControllers.getAllStudents);
+router.get("/", adminCheck, studentsControllers.getStudents);
 router.get("/:stdId", studentsControllers.getStudentById);
 router.get("/bus/:busId", studentsControllers.getStudentsByBus);
-router.get("/parent/:parentId", studentsControllers.getStudentsByParent);
 
 router.post(
   "/new/:parentId",
