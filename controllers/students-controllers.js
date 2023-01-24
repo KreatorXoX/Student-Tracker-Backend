@@ -8,6 +8,7 @@ const BusModel = require("../models/bus-model");
 const UserModel = require("../models/user-model");
 
 const removeStudent = require("../helpers/delete-students");
+const { cloudinary } = require("../config/cloudinaryOptions");
 
 const getStudents = asyncHandler(async (req, res, next) => {
   const { by, id } = req.query;
@@ -15,13 +16,10 @@ const getStudents = asyncHandler(async (req, res, next) => {
   let students;
 
   if (by === "bus") {
-    console.log("bus");
     students = await StudentModel.find({ busId: id }).exec();
   } else if (by === "parent") {
-    console.log("parent");
     students = await StudentModel.find({ parentId: id }).exec();
   } else {
-    console.log("undefined");
     students = await StudentModel.find();
   }
 
@@ -77,6 +75,7 @@ const getStudentsByBus = asyncHandler(async (req, res, next) => {
 
 const createStudent = asyncHandler(async (req, res, next) => {
   const errors = validationResult(req);
+
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs are being passed", 422));
   }
@@ -208,10 +207,14 @@ const updateStudent = asyncHandler(async (req, res, next) => {
   res.status(200).json({ student: updatedStudent.toObject({ getters: true }) });
 });
 
-const deleteStudent = asyncHandler(async (req, res, next) => {
+const deleteStudent = asyncHandler(async (req, res) => {
   const { stdId } = req.params;
 
-  await removeStudent(stdId);
+  const deletedStudent = await StudentModel.findByIdAndDelete({
+    _id: stdId,
+  }).exec();
+
+  await cloudinary.uploader.destroy(deletedStudent.image.filename);
 
   res.status(200).json({ message: "Deletion Successful" });
 });

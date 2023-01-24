@@ -9,9 +9,11 @@ router
   .post(
     upload.single("image"),
     [
-      check("email").isEmail(),
-      check("username").not().isEmpty(),
+      check("name").not().isEmpty(),
+      check("email").normalizeEmail(),
       check("password").isLength({ min: 5 }),
+      check("phoneNumber").not().isEmpty(),
+      check("role").not().isEmpty(),
     ],
     authController.register
   );

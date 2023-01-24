@@ -11,7 +11,7 @@ const router = express.Router();
 
 router.use(authCheck);
 
-router.get("/", adminCheck, studentsControllers.getStudents);
+router.get("/", studentsControllers.getStudents);
 router.get("/:stdId", studentsControllers.getStudentById);
 router.get("/bus/:busId", studentsControllers.getStudentsByBus);
 
@@ -23,7 +23,8 @@ router.post(
     check("name").notEmpty(),
     check("age").isInt({ min: 3 }),
     check("bloodType").isLength({ maxLength: 3 }),
-    check("schoolName").notEmpty(),
+    check("schoolName").not().isEmpty(),
+    check("emergencyContacts").not().isEmpty(),
   ],
   studentsControllers.createStudent
 );
