@@ -1,14 +1,12 @@
 const mongoose = require("mongoose");
 const { validationResult } = require("express-validator");
 const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
 
 const { cloudinary } = require("../config/cloudinaryOptions");
 
 const HttpError = require("../models/http-error");
 const UserModel = require("../models/user-model");
 
-const removeStudent = require("../helpers/delete-students");
 const asyncHandler = require("express-async-handler");
 
 const getUserById = asyncHandler(async (req, res, next) => {

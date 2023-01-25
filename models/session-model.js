@@ -13,11 +13,11 @@ const sessionSchema = new Schema({
         type: String,
         required: true,
       },
-      name: {
-        type: String,
-        required: true,
-      },
       image: {
+        url: String,
+        filename: String,
+      },
+      name: {
         type: String,
         required: true,
       },

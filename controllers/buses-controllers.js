@@ -51,7 +51,6 @@ const createBus = asyncHandler(async (req, res, next) => {
 });
 
 const updateBus = asyncHandler(async (req, res, next) => {
-  const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs are being passed", 422));
   }

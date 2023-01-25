@@ -7,7 +7,6 @@ const StudentModel = require("../models/student-model");
 const BusModel = require("../models/bus-model");
 const UserModel = require("../models/user-model");
 
-const removeStudent = require("../helpers/delete-students");
 const { cloudinary } = require("../config/cloudinaryOptions");
 
 const getStudents = asyncHandler(async (req, res, next) => {
@@ -41,12 +40,12 @@ const getStudentById = asyncHandler(async (req, res, next) => {
     return next(new HttpError("No students found with the given id", 404));
   }
 
-  if (req.userData.userId !== student.parentId.toString())
+  if (req.userData.userId !== student.parentId.toString()) {
     if (req.userData.role !== "admin")
       return next(
         new HttpError("You are not authorized to do this operation!!!", 401)
       );
-
+  }
   res.json({ student: student.toObject({ getters: true }) });
 });
 
@@ -247,7 +246,7 @@ const updateLocation = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const { lat, lng } = req.body;
+  const { location } = req.body;
   const { stdId } = req.params;
   const student = await StudentModel.findById(stdId).exec();
 
@@ -255,8 +254,9 @@ const updateLocation = asyncHandler(async (req, res, next) => {
     return next(new HttpError("No students found with the given id", 404));
   }
 
-  student.location.lat = lat;
-  student.location.lng = lng;
+  student.location.lat = location.lat;
+  student.location.lng = location.lng;
+
   await student.save();
 
   res.status(200).json({ id: stdId, message: "Location updated successfuly" });

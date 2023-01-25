@@ -15,6 +15,8 @@ const newSession = asyncHandler(async (req, res, next) => {
 
   const errors = validationResult(req);
 
+  console.log(errors);
+
   if (!errors.isEmpty()) {
     return next(new HttpError("Invalid inputs are being passed", 422));
   }

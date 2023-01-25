@@ -18,6 +18,7 @@ module.exports = (req, res, next) => {
     req.userData = { userId: decoded.userId, role: decoded.role };
 
     if (req.userData.role !== "admin") {
+      console.log(req);
       return next(new HttpError("Admin Only", 401));
     }
     next();
