@@ -9,7 +9,7 @@ const router = express.Router();
 
 router.use(authCheck);
 
-router.get("/", adminCheck, busesControllers.getAllBuses);
+router.get("/", busesControllers.getAllBuses);
 router.get("/:busId", busesControllers.getBusById);
 
 router.post(
